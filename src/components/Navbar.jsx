@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import logo from "../assets/logo.jpg"; // Adjust the path based on where you place your logo file
 
 function Navbar() {
   return (
@@ -9,7 +10,14 @@ function Navbar() {
       className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top"
     >
       <div className="container-fluid">
-        <a className="navbar-brand text-danger fw-bold fs-2" href="#">Xstream</a>
+        <a className="navbar-brand d-flex align-items-center text-danger fw-bold fs-2" href="#">
+          <img
+            src={logo}
+            alt="Xstream Logo"
+            style={{ height: "40px", width: "60px", marginRight: "10px" }}
+          />
+          Xstream
+        </a>
         <button
           className="navbar-toggler"
           type="button"
