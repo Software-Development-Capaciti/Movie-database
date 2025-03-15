@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom"; // Add this import
 import ReactPlayer from "react-player";
 
 function Hero() {
@@ -32,14 +33,16 @@ function Hero() {
         >
           Unlimited movies, TV shows, and more. Watch anywhere. Cancel anytime.
         </motion.p>
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.4 }}
-          className="btn btn-danger btn-lg mt-4"
-        >
-          Start Watching
-        </motion.button>
+        <Link to="/genres">
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.4 }}
+            className="btn btn-danger btn-lg mt-4"
+          >
+            Start Watching
+          </motion.button>
+        </Link>
       </div>
     </section>
   );
