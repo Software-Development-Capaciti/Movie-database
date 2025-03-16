@@ -1,67 +1,54 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // Add this import
+import { useParams, useLocation } from "react-router-dom";
 import axios from "axios";
 
-function GenreMovies() {
-  const [genres, setGenres] = useState([]);
-  const [moviesByGenre, setMoviesByGenre] = useState({});
+function CategoryDetail() {
+  const [movies, setMovies] = useState([]);
+  const [page, setPage] = useState(1);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [trailerKey, setTrailerKey] = useState(null);
+  const { categoryId } = useParams();
+  const { state } = useLocation();
+  const categoryTitle = state?.categoryTitle || "Category";
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
-  const navigate = useNavigate(); // Add navigation hook
 
-  // Fetch list of genres on mount
+  // Map categoryId to TMDb endpoint
+  const getEndpoint = (categoryId) => {
+    switch (categoryId) {
+      case "trending":
+        return `${BASE_URL}/trending/movie/week?api_key=${API_KEY}&page=${page}`;
+      case "new-releases":
+        return `${BASE_URL}/movie/now_playing?api_key=${API_KEY}&language=en-US&page=${page}`;
+      case "popular":
+        return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
+      default:
+        return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
+    }
+  };
+
+  // Fetch movies for the category
   useEffect(() => {
-    const fetchGenres = async () => {
+    const fetchMovies = async () => {
       try {
-        const response = await axios.get(
-          `${BASE_URL}/genre/movie/list?api_key=${API_KEY}&language=en-US`
-        );
-        const fetchedGenres = response.data.genres;
-        setGenres(fetchedGenres);
-
-        fetchMoviesForAllGenres(fetchedGenres);
-      } catch (error) {
-        console.error("Error fetching genres:", error);
-      }
-    };
-
-    fetchGenres();
-  }, []);
-
-  // Fetch initial movies for all genres (first page only)
-  const fetchMoviesForAllGenres = async (genresList) => {
-    const moviesData = {};
-
-    for (const genre of genresList) {
-      try {
-        const response = await axios.get(
-          `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_genres=${genre.id}&language=en-US&page=1`
-        );
-        const movieData = response.data.results.slice(0, 6).map((movie) => ({
+        const endpoint = getEndpoint(categoryId);
+        const response = await axios.get(endpoint);
+        const newMovies = response.data.results.map((movie) => ({
           id: movie.id,
           title: movie.title,
           img: `${IMAGE_BASE_URL}${movie.poster_path}`,
         }));
-        moviesData[genre.id] = movieData;
+        setMovies((prev) => [...prev, ...newMovies]);
       } catch (error) {
-        console.error(`Error fetching movies for genre ${genre.name}:`, error);
-        moviesData[genre.id] = [];
+        console.error(`Error fetching movies for category ${categoryTitle}:`, error);
       }
-    }
+    };
 
-    setMoviesByGenre(moviesData);
-  };
-
-  // Handle "View More" click to navigate to CategoryDetail
-  const handleViewMore = (genreId, genreName) => {
-    console.log("Navigating to CategoryDetail for genre:", genreName, genreId); // Debug log
-    navigate(`/category/genre-${genreId}`, { state: { categoryTitle: `${genreName} Movies` } });
-  };
+    fetchMovies();
+  }, [categoryId, page]);
 
   // Fetch movie details and trailer when a movie is selected
   useEffect(() => {
@@ -105,43 +92,40 @@ function GenreMovies() {
     setTrailerKey(null);
   };
 
+  // Load more movies
+  const handleLoadMore = () => {
+    setPage((prev) => prev + 1);
+  };
+
   return (
     <div className="bg-dark text-white min-h-screen py-5">
       <div className="container">
         <h1 className="text-center mb-5" style={{ marginTop: "80px" }}>
-          Movies by Genre
+          {categoryTitle}
         </h1>
-
-        {genres.map((genre) => (
-          <section key={genre.id} className="mb-5">
-            <h2 className="h3 fw-bold text-white mb-3">{genre.name}</h2>
-            <div className="d-flex overflow-auto pb-3" style={{ scrollbarWidth: "none" }}>
-              {(moviesByGenre[genre.id] || []).map((movie, index) => (
-                <motion.div
-                  key={`${genre.id}-${index}`}
-                  whileHover={{ scale: 1.1, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className="card bg-secondary text-white me-3"
-                  style={{ minWidth: "200px", cursor: "pointer" }}
-                  onClick={() => handleMovieClick(movie)}
-                >
-                  <img src={movie.img} className="card-img-top" alt={movie.title} />
-                  <div className="card-body text-center">
-                    <p className="card-text">{movie.title}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-            <div className="text-center mt-3">
-              <button
-                className="btn btn-danger"
-                onClick={() => handleViewMore(genre.id, genre.name)}
+        <div className="row">
+          {movies.map((movie, index) => (
+            <div key={`${categoryId}-${index}`} className="col-6 col-md-4 col-lg-3 mb-4">
+              <motion.div
+                whileHover={{ scale: 1.1, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="card bg-secondary text-white"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleMovieClick(movie)}
               >
-                View More
-              </button>
+                <img src={movie.img} className="card-img-top" alt={movie.title} />
+                <div className="card-body text-center">
+                  <p className="card-text">{movie.title}</p>
+                </div>
+              </motion.div>
             </div>
-          </section>
-        ))}
+          ))}
+        </div>
+        <div className="text-center mt-4">
+          <button className="btn btn-danger" onClick={handleLoadMore}>
+            Load More
+          </button>
+        </div>
 
         {/* Modal for movie details and trailer */}
         {selectedMovie && (
@@ -218,4 +202,4 @@ function GenreMovies() {
   );
 }
 
-export default GenreMovies;
+export default CategoryDetail;
