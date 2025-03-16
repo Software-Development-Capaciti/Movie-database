@@ -3,6 +3,8 @@ import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import ContentRow from "./components/ContentRow";
 import GenreMovies from "./components/GenreMovies";
+import GenreDetail from "./components/GenreDetail";
+import CategoryDetail from "./components/CategoryDetail";
 
 function App() {
   return (
@@ -10,7 +12,6 @@ function App() {
       <div className="bg-dark text-white min-h-screen">
         <Navbar />
         <Routes>
-          {/* Homepage with Hero and ContentRows */}
           <Route
             path="/"
             element={
@@ -22,8 +23,10 @@ function App() {
               </>
             }
           />
-          {/* Genre Movies page */}
           <Route path="/genres" element={<GenreMovies />} />
+          <Route path="/genres/:genreId" element={<GenreDetail />} />
+          <Route path="/category/:categoryId" element={<CategoryDetail />} />
+          <Route path="/search" element={<CategoryDetail />} /> {/* Add search route */}
         </Routes>
       </div>
     </Router>

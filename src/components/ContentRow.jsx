@@ -1,27 +1,41 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Add this import
 import axios from "axios";
 
 function ContentRow({ title }) {
   const [movies, setMovies] = useState([]);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
-  const [trailerKey, setTrailerKey] = useState(null); // Store YouTube trailer key
-  const API_KEY = "af4905a1355138ebdf953acefa15cd9f"; // Your TMDb API key
+  const [trailerKey, setTrailerKey] = useState(null);
+  const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
+  const navigate = useNavigate(); // Add navigation hook
 
-  // Map the title to an appropriate TMDb endpoint
-  const getEndpoint = (title) => {
+  // Map the title to an appropriate TMDb endpoint and category ID
+  const getEndpointAndId = (title) => {
     switch (title) {
       case "Trending Now":
-        return `${BASE_URL}/trending/movie/week?api_key=${API_KEY}`;
+        return {
+          endpoint: `${BASE_URL}/trending/movie/week?api_key=${API_KEY}`,
+          categoryId: "trending",
+        };
       case "New Releases":
-        return `${BASE_URL}/movie/now_playing?api_key=${API_KEY}&language=en-US&page=1`;
+        return {
+          endpoint: `${BASE_URL}/movie/now_playing?api_key=${API_KEY}&language=en-US&page=1`,
+          categoryId: "new-releases",
+        };
       case "Xstream Originals":
-        return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`;
+        return {
+          endpoint: `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`,
+          categoryId: "popular",
+        };
       default:
-        return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`;
+        return {
+          endpoint: `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`,
+          categoryId: "popular",
+        };
     }
   };
 
@@ -29,7 +43,8 @@ function ContentRow({ title }) {
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        const response = await axios.get(getEndpoint(title));
+        const { endpoint } = getEndpointAndId(title);
+        const response = await axios.get(endpoint);
         const movieData = response.data.results.slice(0, 6).map((movie) => ({
           id: movie.id,
           title: movie.title,
@@ -56,20 +71,18 @@ function ContentRow({ title }) {
 
     const fetchMovieDetails = async () => {
       try {
-        // Fetch movie details
         const detailsResponse = await axios.get(
           `${BASE_URL}/movie/${selectedMovie.id}?api_key=${API_KEY}&language=en-US`
         );
         setMovieDetails(detailsResponse.data);
 
-        // Fetch movie videos (trailers)
         const videosResponse = await axios.get(
           `${BASE_URL}/movie/${selectedMovie.id}/videos?api_key=${API_KEY}&language=en-US`
         );
         const trailer = videosResponse.data.results.find(
           (video) => video.type === "Trailer" && video.site === "YouTube"
         );
-        setTrailerKey(trailer ? trailer.key : null); // Store YouTube video key if trailer exists
+        setTrailerKey(trailer ? trailer.key : null);
       } catch (error) {
         console.error("Error fetching movie details or trailer:", error);
         setMovieDetails(null);
@@ -83,8 +96,8 @@ function ContentRow({ title }) {
   // Handle movie card click
   const handleMovieClick = (movie) => {
     setSelectedMovie(movie);
-    setMovieDetails(null); // Reset details while fetching
-    setTrailerKey(null); // Reset trailer while fetching
+    setMovieDetails(null);
+    setTrailerKey(null);
   };
 
   // Close the modal
@@ -92,6 +105,12 @@ function ContentRow({ title }) {
     setSelectedMovie(null);
     setMovieDetails(null);
     setTrailerKey(null);
+  };
+
+  // Handle "View More" click
+  const handleViewMore = () => {
+    const { categoryId } = getEndpointAndId(title);
+    navigate(`/category/${categoryId}`, { state: { categoryTitle: title } });
   };
 
   return (
@@ -113,6 +132,11 @@ function ContentRow({ title }) {
             </div>
           </motion.div>
         ))}
+      </div>
+      <div className="text-center mt-3">
+        <button className="btn btn-danger" onClick={handleViewMore}>
+          View More
+        </button>
       </div>
 
       {/* Modal for movie details and trailer */}
@@ -138,7 +162,6 @@ function ContentRow({ title }) {
               <div className="modal-body">
                 {movieDetails ? (
                   <>
-                    {/* Trailer */}
                     {trailerKey ? (
                       <div className="mb-3">
                         <iframe
@@ -154,8 +177,6 @@ function ContentRow({ title }) {
                     ) : (
                       <p className="mb-3">No trailer available.</p>
                     )}
-
-                    {/* Movie Details */}
                     <div className="d-flex">
                       <img
                         src={`${IMAGE_BASE_URL}${movieDetails.poster_path}`}
