@@ -12,12 +12,26 @@ function CategoryDetail() {
   const { categoryId } = useParams();
   const { state } = useLocation();
   const categoryTitle = state?.categoryTitle || "Category";
+  const searchQuery = state?.searchQuery || null; // From search
+  const genreId = state?.genreId || null; // From genre filter
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
 
-  // Map categoryId to TMDb endpoint
-  const getEndpoint = (categoryId) => {
+  // Determine the endpoint based on categoryId or search
+  const getEndpoint = () => {
+    if (searchQuery) {
+      // Search endpoint with optional genre filter
+      let endpoint = `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&language=en-US&page=${page}`;
+      if (genreId) {
+        endpoint += `&with_genres=${genreId}`;
+      }
+      return endpoint;
+    }
+    if (categoryId.startsWith("genre-")) {
+      const genreId = categoryId.replace("genre-", "");
+      return `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_genres=${genreId}&language=en-US&page=${page}`;
+    }
     switch (categoryId) {
       case "trending":
         return `${BASE_URL}/trending/movie/week?api_key=${API_KEY}&page=${page}`;
@@ -30,11 +44,12 @@ function CategoryDetail() {
     }
   };
 
-  // Fetch movies for the category
+  // Fetch movies for the category, genre, or search
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        const endpoint = getEndpoint(categoryId);
+        const endpoint = getEndpoint();
+        console.log("Fetching movies from:", endpoint);
         const response = await axios.get(endpoint);
         const newMovies = response.data.results.map((movie) => ({
           id: movie.id,
@@ -43,12 +58,12 @@ function CategoryDetail() {
         }));
         setMovies((prev) => [...prev, ...newMovies]);
       } catch (error) {
-        console.error(`Error fetching movies for category ${categoryTitle}:`, error);
+        console.error(`Error fetching movies for ${categoryTitle}:`, error);
       }
     };
 
     fetchMovies();
-  }, [categoryId, page]);
+  }, [categoryId, page, searchQuery, genreId]);
 
   // Fetch movie details and trailer when a movie is selected
   useEffect(() => {

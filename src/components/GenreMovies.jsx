@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // Add this import
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 function GenreMovies() {
@@ -9,10 +9,12 @@ function GenreMovies() {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [trailerKey, setTrailerKey] = useState(null);
+  const [searchQuery, setSearchQuery] = useState(""); // State for search input
+  const [selectedGenre, setSelectedGenre] = useState(""); // State for genre filter
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
-  const navigate = useNavigate(); // Add navigation hook
+  const navigate = useNavigate();
 
   // Fetch list of genres on mount
   useEffect(() => {
@@ -23,7 +25,6 @@ function GenreMovies() {
         );
         const fetchedGenres = response.data.genres;
         setGenres(fetchedGenres);
-
         fetchMoviesForAllGenres(fetchedGenres);
       } catch (error) {
         console.error("Error fetching genres:", error);
@@ -59,8 +60,22 @@ function GenreMovies() {
 
   // Handle "View More" click to navigate to CategoryDetail
   const handleViewMore = (genreId, genreName) => {
-    console.log("Navigating to CategoryDetail for genre:", genreName, genreId); // Debug log
+    console.log("Navigating to CategoryDetail for genre:", genreName, genreId);
     navigate(`/category/genre-${genreId}`, { state: { categoryTitle: `${genreName} Movies` } });
+  };
+
+  // Handle search submission
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return; // Prevent empty searches
+    console.log("Searching for:", searchQuery, "with genre:", selectedGenre || "All");
+    navigate("/search", {
+      state: {
+        searchQuery,
+        genreId: selectedGenre || null,
+        categoryTitle: `Search Results for "${searchQuery}"`,
+      },
+    });
   };
 
   // Fetch movie details and trailer when a movie is selected
@@ -112,6 +127,41 @@ function GenreMovies() {
           Movies by Genre
         </h1>
 
+        {/* Search and Filter Form */}
+        <form onSubmit={handleSearch} className="mb-5">
+          <div className="row justify-content-center">
+            <div className="col-md-6 col-lg-4 mb-3">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search movies..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="col-md-4 col-lg-3 mb-3">
+              <select
+                className="form-select"
+                value={selectedGenre}
+                onChange={(e) => setSelectedGenre(e.target.value)}
+              >
+                <option value="">All Genres</option>
+                {genres.map((genre) => (
+                  <option key={genre.id} value={genre.id}>
+                    {genre.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-2 col-lg-2">
+              <button type="submit" className="btn btn-danger w-100">
+                Search
+              </button>
+            </div>
+          </div>
+        </form>
+
+        {/* Genre Sections */}
         {genres.map((genre) => (
           <section key={genre.id} className="mb-5">
             <h2 className="h3 fw-bold text-white mb-3">{genre.name}</h2>

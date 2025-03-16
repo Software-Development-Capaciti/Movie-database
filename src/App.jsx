@@ -5,7 +5,6 @@ import ContentRow from "./components/ContentRow";
 import GenreMovies from "./components/GenreMovies";
 import GenreDetail from "./components/GenreDetail";
 import CategoryDetail from "./components/CategoryDetail";
-import SimilarMovies from "./components/SimilarMovies"; 
 
 function App() {
   return (
@@ -13,7 +12,6 @@ function App() {
       <div className="bg-dark text-white min-h-screen">
         <Navbar />
         <Routes>
-          {/* Homepage with Hero and ContentRows */}
           <Route
             path="/"
             element={
@@ -25,14 +23,10 @@ function App() {
               </>
             }
           />
-          {/* Genre Movies page */}
           <Route path="/genres" element={<GenreMovies />} />
-          {/* Genre Detail page */}
           <Route path="/genres/:genreId" element={<GenreDetail />} />
-          {/* Category Detail page */}
           <Route path="/category/:categoryId" element={<CategoryDetail />} />
-          {/* Similar Movies page */}
-          <Route path="/movies/:movieId/similar" element={<SimilarMovies />} />
+          <Route path="/search" element={<CategoryDetail />} /> {/* Add search route */}
         </Routes>
       </div>
     </Router>
