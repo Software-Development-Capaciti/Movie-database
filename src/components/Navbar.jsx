@@ -38,7 +38,7 @@ function Navbar() {
         animate={{ y: 0 }}
         transition={{ duration: 0.5 }}
         className="navbar navbar-expand-lg navbar-dark fixed-top"
-        style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
       >
         <div className="container-fluid">
           <Link className="navbar-brand text-danger fw-bold fs-2" to="/">
