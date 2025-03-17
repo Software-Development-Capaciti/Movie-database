@@ -3,25 +3,50 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import axios from "axios";
 
+const StarRating = ({ rating, onRate }) => {
+  const stars = Array(5)
+    .fill(false)
+    .map((_, index) => index < rating);
+    
+
+  return (
+    <div className="star-rating">
+      {stars.map((filled, index) => (
+        <span
+          key={index}
+          className={`star ${filled ? "filled" : ""}`}
+          onClick={() => onRate(index + 1)}
+          style={{
+            color: filled ? "#ffcc00" : "#ddd",
+            cursor: "pointer",
+            fontSize: "40px",
+          }}
+        >
+          &#9733;
+        </span>
+      ))}
+    </div>
+  );
+};
+
 function CategoryDetail() {
   const [movies, setMovies] = useState([]);
   const [page, setPage] = useState(1);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [trailerKey, setTrailerKey] = useState(null);
+  const [rating, setRating] = useState(0); // State for rating
   const { categoryId } = useParams();
   const { state } = useLocation();
   const categoryTitle = state?.categoryTitle || "Category";
-  const searchQuery = state?.searchQuery || null; // From search
-  const genreId = state?.genreId || null; // From genre filter
+  const searchQuery = state?.searchQuery || null;
+  const genreId = state?.genreId || null;
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
 
-  // Determine the endpoint based on categoryId or search
   const getEndpoint = () => {
     if (searchQuery) {
-      // Search endpoint with optional genre filter
       let endpoint = `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&language=en-US&page=${page}`;
       if (genreId) {
         endpoint += `&with_genres=${genreId}`;
@@ -44,12 +69,10 @@ function CategoryDetail() {
     }
   };
 
-  // Fetch movies for the category, genre, or search
   useEffect(() => {
     const fetchMovies = async () => {
       try {
         const endpoint = getEndpoint();
-        console.log("Fetching movies from:", endpoint);
         const response = await axios.get(endpoint);
         const newMovies = response.data.results.map((movie) => ({
           id: movie.id,
@@ -65,7 +88,6 @@ function CategoryDetail() {
     fetchMovies();
   }, [categoryId, page, searchQuery, genreId]);
 
-  // Fetch movie details and trailer when a movie is selected
   useEffect(() => {
     if (!selectedMovie) return;
 
@@ -93,23 +115,28 @@ function CategoryDetail() {
     fetchMovieDetails();
   }, [selectedMovie]);
 
-  // Handle movie card click
   const handleMovieClick = (movie) => {
     setSelectedMovie(movie);
     setMovieDetails(null);
     setTrailerKey(null);
   };
 
-  // Close the modal
   const handleCloseModal = () => {
     setSelectedMovie(null);
     setMovieDetails(null);
     setTrailerKey(null);
   };
 
-  // Load more movies
   const handleLoadMore = () => {
     setPage((prev) => prev + 1);
+  };
+
+  const handleRatingChange = (newRating) => {
+    setRating(newRating);
+  };
+
+  const handleSubmitRating = () => {
+    console.log("Submitting rating:", rating);
   };
 
   return (
@@ -193,6 +220,15 @@ function CategoryDetail() {
                           <p><strong>Rating:</strong> {movieDetails.vote_average}/10</p>
                           <p><strong>Runtime:</strong> {movieDetails.runtime} minutes</p>
                         </div>
+                      </div>
+                      <div className="mt-3">
+                        <h5>Rate this Movie</h5>
+                        <StarRating rating={rating} onRate={handleRatingChange} />
+                      </div>
+                      <div className="mt-3">
+                        <button className="btn btn-danger" onClick={handleSubmitRating}>
+                          Submit Rating
+                        </button>
                       </div>
                     </>
                   ) : (
