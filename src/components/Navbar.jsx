@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import Auth from './Auth';
 import './Navbar.css';
+import xstreamIcon from '../assets/popcorn-movie-cinema-svgrepo-com.svg'; // Adjust path to your icon
 
 function Navbar() {
   const [showAuth, setShowAuth] = useState(false);
@@ -41,8 +42,14 @@ function Navbar() {
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
       >
         <div className="container-fluid">
-          <Link className="navbar-brand text-danger fw-bold fs-2" to="/">
-            XStream
+          <Link className="navbar-brand text-danger fw-bold fs-2 d-flex align-items-center" to="/">
+            <img 
+              src={xstreamIcon} 
+              alt="XStream Icon" 
+              className="me-2" 
+              style={{ width: '32px', height: '32px' }} // Adjust size as needed
+            />
+            Xstream
           </Link>
           <button
             className="navbar-toggler border-0"
