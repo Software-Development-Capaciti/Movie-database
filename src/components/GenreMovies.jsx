@@ -3,14 +3,39 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
+const StarRating = ({ rating, onRate }) => {
+  const stars = Array(5).fill(false).map((_, index) => index < rating);
+
+  return (
+    <div className="star-rating">
+      {stars.map((filled, index) => (
+        <span
+          key={index}
+          className={`star ${filled ? "filled" : ""}`}
+          onClick={() => onRate(index + 1)}
+          style={{
+            color: filled ? "#ffcc00" : "#ddd", 
+            cursor: "pointer", 
+            fontSize: "40px", // Increase size here
+          }}
+        >
+          &#9733;
+        </span>
+      ))}
+    </div>
+  );
+};
+
+
 function GenreMovies() {
   const [genres, setGenres] = useState([]);
   const [moviesByGenre, setMoviesByGenre] = useState({});
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [trailerKey, setTrailerKey] = useState(null);
-  const [searchQuery, setSearchQuery] = useState(""); // State for search input
-  const [selectedGenre, setSelectedGenre] = useState(""); // State for genre filter
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedGenre, setSelectedGenre] = useState("");
+  const [rating, setRating] = useState(0); // State for movie rating
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
@@ -111,6 +136,7 @@ function GenreMovies() {
     setSelectedMovie(movie);
     setMovieDetails(null);
     setTrailerKey(null);
+    setRating(0); // Reset rating when a new movie is selected
   };
 
   // Close the modal
@@ -118,6 +144,18 @@ function GenreMovies() {
     setSelectedMovie(null);
     setMovieDetails(null);
     setTrailerKey(null);
+    setRating(0); // Reset rating when modal is closed
+  };
+
+  // Handle rating change
+  const handleRatingChange = (newRating) => {
+    setRating(newRating);
+  };
+
+  // Handle submit rating
+  const handleSubmitRating = () => {
+    console.log("Submitting rating:", rating);
+    // You can submit the rating to an API here or handle it as needed
   };
 
   return (
@@ -244,6 +282,18 @@ function GenreMovies() {
                           <p><strong>Rating:</strong> {movieDetails.vote_average}/10</p>
                           <p><strong>Runtime:</strong> {movieDetails.runtime} minutes</p>
                         </div>
+                      </div>
+                      <div className="mt-3">
+                        <h5>Rate this Movie</h5>
+                        <StarRating rating={rating} onRate={handleRatingChange} />
+                      </div>
+                      <div className="mt-3">
+                        <button
+                          className="btn btn-danger"
+                          onClick={handleSubmitRating}
+                        >
+                          Submit Rating
+                        </button>
                       </div>
                     </>
                   ) : (
