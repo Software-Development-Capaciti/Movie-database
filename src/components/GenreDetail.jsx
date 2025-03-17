@@ -207,4 +207,5 @@ function GenreDetail() {
   );
 }
 
+
 export default GenreDetail;
