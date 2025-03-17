@@ -9,63 +9,28 @@ function CategoryDetail() {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [trailerKey, setTrailerKey] = useState(null);
+  const [rating, setRating] = useState(0);
   const { categoryId } = useParams();
   const { state } = useLocation();
   const categoryTitle = state?.categoryTitle || "Category";
-  const searchQuery = state?.searchQuery || null; // From search
-  const genreId = state?.genreId || null; // From genre filter
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
+  const JSON_SERVER_URL = "http://localhost:5000/ratings";
 
-  // Determine the endpoint based on categoryId or search
-  const getEndpoint = () => {
-    if (searchQuery) {
-      // Search endpoint with optional genre filter
-      let endpoint = `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&language=en-US&page=${page}`;
-      if (genreId) {
-        endpoint += `&with_genres=${genreId}`;
-      }
-      return endpoint;
-    }
-    if (categoryId.startsWith("genre-")) {
-      const genreId = categoryId.replace("genre-", "");
-      return `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_genres=${genreId}&language=en-US&page=${page}`;
-    }
-    switch (categoryId) {
-      case "trending":
-        return `${BASE_URL}/trending/movie/week?api_key=${API_KEY}&page=${page}`;
-      case "new-releases":
-        return `${BASE_URL}/movie/now_playing?api_key=${API_KEY}&language=en-US&page=${page}`;
-      case "popular":
-        return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
-      default:
-        return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
-    }
-  };
-
-  // Fetch movies for the category, genre, or search
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        const endpoint = getEndpoint();
-        console.log("Fetching movies from:", endpoint);
-        const response = await axios.get(endpoint);
-        const newMovies = response.data.results.map((movie) => ({
-          id: movie.id,
-          title: movie.title,
-          img: `${IMAGE_BASE_URL}${movie.poster_path}`,
-        }));
-        setMovies((prev) => [...prev, ...newMovies]);
+        const response = await axios.get(`${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`);
+        setMovies(response.data.results);
       } catch (error) {
-        console.error(`Error fetching movies for ${categoryTitle}:`, error);
+        console.error("Error fetching movies:", error);
       }
     };
 
     fetchMovies();
-  }, [categoryId, page, searchQuery, genreId]);
+  }, [page]);
 
-  // Fetch movie details and trailer when a movie is selected
   useEffect(() => {
     if (!selectedMovie) return;
 
@@ -84,51 +49,52 @@ function CategoryDetail() {
         );
         setTrailerKey(trailer ? trailer.key : null);
       } catch (error) {
-        console.error("Error fetching movie details or trailer:", error);
-        setMovieDetails(null);
-        setTrailerKey(null);
+        console.error("Error fetching movie details:", error);
       }
     };
 
     fetchMovieDetails();
   }, [selectedMovie]);
 
-  // Handle movie card click
   const handleMovieClick = (movie) => {
     setSelectedMovie(movie);
     setMovieDetails(null);
     setTrailerKey(null);
+    setRating(0);
   };
 
-  // Close the modal
-  const handleCloseModal = () => {
-    setSelectedMovie(null);
-    setMovieDetails(null);
-    setTrailerKey(null);
-  };
-
-  // Load more movies
-  const handleLoadMore = () => {
-    setPage((prev) => prev + 1);
+  const handleRatingSubmit = async () => {
+    if (rating === 0) {
+      alert("Please select a rating before submitting.");
+      return;
+    }
+    try {
+      await axios.post(JSON_SERVER_URL, {
+        movieId: selectedMovie.id,
+        title: selectedMovie.title,
+        rating: rating,
+      });
+      alert("Rating submitted successfully!");
+      setSelectedMovie(null);
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+    }
   };
 
   return (
     <div className="bg-dark text-white min-h-screen py-5">
       <div className="container">
-        <h1 className="text-center mb-5" style={{ marginTop: "80px" }}>
-          {categoryTitle}
-        </h1>
+        <h1 className="text-center mb-5" style={{ marginTop: "80px" }}>{categoryTitle}</h1>
         <div className="row">
-          {movies.map((movie, index) => (
-            <div key={`${categoryId}-${index}`} className="col-6 col-md-4 col-lg-3 mb-4">
+          {movies.map((movie) => (
+            <div key={movie.id} className="col-md-4 mb-4">
               <motion.div
-                whileHover={{ scale: 1.1, y: -10 }}
-                transition={{ duration: 0.3 }}
+                whileHover={{ scale: 1.1 }}
                 className="card bg-secondary text-white"
                 style={{ cursor: "pointer" }}
                 onClick={() => handleMovieClick(movie)}
               >
-                <img src={movie.img} className="card-img-top" alt={movie.title} />
+                <img src={`${IMAGE_BASE_URL}${movie.poster_path}`} className="card-img-top" alt={movie.title} />
                 <div className="card-body text-center">
                   <p className="card-text">{movie.title}</p>
                 </div>
@@ -136,77 +102,38 @@ function CategoryDetail() {
             </div>
           ))}
         </div>
-        <div className="text-center mt-4">
-          <button className="btn btn-danger" onClick={handleLoadMore}>
-            Load More
-          </button>
-        </div>
-
-        {/* Modal for movie details and trailer */}
         {selectedMovie && (
-          <div
-            className="modal fade show d-block"
-            style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}
-            onClick={handleCloseModal}
-          >
-            <div
-              className="modal-dialog modal-lg"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}>
+            <div className="modal-dialog modal-lg">
               <div className="modal-content bg-dark text-white">
-                <div className="modal-header border-0">
+                <div className="modal-header">
                   <h5 className="modal-title">{selectedMovie.title}</h5>
-                  <button
-                    type="button"
-                    className="btn-close btn-close-white"
-                    onClick={handleCloseModal}
-                  ></button>
+                  <button type="button" className="btn-close" onClick={() => setSelectedMovie(null)}></button>
                 </div>
                 <div className="modal-body">
                   {movieDetails ? (
                     <>
-                      {trailerKey ? (
-                        <div className="mb-3">
-                          <iframe
-                            width="100%"
-                            height="315"
-                            src={`https://www.youtube.com/embed/${trailerKey}?autoplay=0`}
-                            title={`${selectedMovie.title} Trailer`}
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          ></iframe>
-                        </div>
-                      ) : (
-                        <p className="mb-3">No trailer available.</p>
+                      {trailerKey && (
+                        <iframe width="100%" height="315" src={`https://www.youtube.com/embed/${trailerKey}`} title="Trailer"></iframe>
                       )}
-                      <div className="d-flex">
-                        <img
-                          src={`${IMAGE_BASE_URL}${movieDetails.poster_path}`}
-                          alt={movieDetails.title}
-                          className="img-fluid rounded mb-3"
-                          style={{ maxWidth: "200px", marginRight: "20px" }}
-                        />
-                        <div>
-                          <p><strong>Overview:</strong> {movieDetails.overview}</p>
-                          <p><strong>Release Date:</strong> {movieDetails.release_date}</p>
-                          <p><strong>Rating:</strong> {movieDetails.vote_average}/10</p>
-                          <p><strong>Runtime:</strong> {movieDetails.runtime} minutes</p>
-                        </div>
+                      <p><strong>Overview:</strong> {movieDetails.overview}</p>
+                      <p><strong>Release Date:</strong> {movieDetails.release_date}</p>
+                      <p><strong>Rating:</strong> {movieDetails.vote_average}/10</p>
+                      <div className="star-rating">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <span key={star} onClick={() => setRating(star)} style={{ cursor: "pointer", fontSize: "24px" }}>
+                            {star <= rating ? "\u2605" : "\u2606"}
+                          </span>
+                        ))}
                       </div>
                     </>
                   ) : (
-                    <p>Loading details and trailer...</p>
+                    <p>Loading movie details...</p>
                   )}
                 </div>
-                <div className="modal-footer border-0">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={handleCloseModal}
-                  >
-                    Close
-                  </button>
+                <div className="modal-footer">
+                  <button className="btn btn-primary" onClick={handleRatingSubmit}>Submit Rating</button>
+                  <button className="btn btn-secondary" onClick={() => setSelectedMovie(null)}>Close</button>
                 </div>
               </div>
             </div>
