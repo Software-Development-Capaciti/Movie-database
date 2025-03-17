@@ -7,7 +7,7 @@ function Hero() {
     <section className="position-relative vh-100">
       {/* Trailer Video */}
       <ReactPlayer
-        url="https://www.youtube.com/watch?v=vICUPlr3EEI&pp=ygUhZXhwbGljaXQgbW92aWUgdHJhaWxlciBmb3IgYWR1bHRz" // trailer URL
+        url="https://youtu.be/nSbzyEJ8X9E" // trailer URL
         playing
         muted
         loop
