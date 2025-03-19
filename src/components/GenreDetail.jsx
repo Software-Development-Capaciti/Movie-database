@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { getAuth } from "firebase/auth"; // Add Firebase auth
 import axios from "axios";
+import { addToUserList, isMovieInList, removeFromUserList } from "../utils/localStorage"; // Import utils
 
 function GenreDetail() {
   const [movies, setMovies] = useState([]);
@@ -16,8 +18,9 @@ function GenreDetail() {
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
   const navigate = useNavigate();
+  const auth = getAuth();
+  const user = auth.currentUser; // Get current user
 
-  // Fetch movies for the genre
   useEffect(() => {
     const fetchMovies = async () => {
       try {
@@ -38,7 +41,6 @@ function GenreDetail() {
     fetchMovies();
   }, [genreId, page]);
 
-  // Fetch movie details and trailer when a movie is selected
   useEffect(() => {
     if (!selectedMovie) return;
 
@@ -66,7 +68,6 @@ function GenreDetail() {
     fetchMovieDetails();
   }, [selectedMovie]);
 
-  // Handle movie card click (for modal)
   const handleMovieClick = (movie) => {
     console.log("Movie clicked for modal:", movie.title);
     setSelectedMovie(movie);
@@ -74,22 +75,32 @@ function GenreDetail() {
     setTrailerKey(null);
   };
 
-  // Handle "View More" click (navigate to similar movies)
   const handleViewMore = (movieId, movieTitle) => {
     console.log("View More clicked for:", movieTitle, "Navigating to:", `/movies/${movieId}/similar`);
     navigate(`/movies/${movieId}/similar`, { state: { movieTitle } });
   };
 
-  // Close the modal
   const handleCloseModal = () => {
     setSelectedMovie(null);
     setMovieDetails(null);
     setTrailerKey(null);
   };
 
-  // Load more movies for the genre
   const handleLoadMore = () => {
     setPage((prev) => prev + 1);
+  };
+
+  const handleToggleList = (movie) => {
+    if (!user) {
+      alert("Please sign in to add movies to your list.");
+      return;
+    }
+    const isInList = isMovieInList(user.uid, movie.id);
+    if (isInList) {
+      removeFromUserList(user.uid, movie.id);
+    } else {
+      addToUserList(user.uid, { id: movie.id, title: movie.title, img: movie.img });
+    }
   };
 
   return (
@@ -116,11 +127,22 @@ function GenreDetail() {
                 <div className="card-body text-center">
                   <p className="card-text">{movie.title}</p>
                   <button
-                    className="btn btn-danger btn-sm mt-2"
+                    className="btn btn-danger btn-sm mt-2 me-2"
                     onClick={() => handleViewMore(movie.id, movie.title)}
                   >
                     View More
                   </button>
+                  {user && (
+                    <button
+                      className={`btn btn-sm mt-2 ${isMovieInList(user.uid, movie.id) ? 'btn-outline-danger' : 'btn-success'}`}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        handleToggleList(movie);
+                      }}
+                    >
+                      {isMovieInList(user.uid, movie.id) ? 'Remove' : 'Add to List'}
+                    </button>
+                  )}
                 </div>
               </motion.div>
             </div>
@@ -132,7 +154,6 @@ function GenreDetail() {
           </button>
         </div>
 
-        {/* Modal for movie details and trailer */}
         {selectedMovie && (
           <div
             className="modal fade show d-block"

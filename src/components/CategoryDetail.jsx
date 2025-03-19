@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
+import { getAuth } from "firebase/auth"; // Add Firebase auth
 import axios from "axios";
+import { addToUserList, isMovieInList, removeFromUserList } from "../utils/localStorage"; // Import utils
 
 function CategoryDetail() {
   const [movies, setMovies] = useState([]);
@@ -12,20 +14,18 @@ function CategoryDetail() {
   const { categoryId } = useParams();
   const { state } = useLocation();
   const categoryTitle = state?.categoryTitle || "Category";
-  const searchQuery = state?.searchQuery || null; // From search
-  const genreId = state?.genreId || null; // From genre filter
+  const searchQuery = state?.searchQuery || null;
+  const genreId = state?.genreId || null;
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
+  const auth = getAuth();
+  const user = auth.currentUser; // Get current user
 
-  // Determine the endpoint based on categoryId or search
   const getEndpoint = () => {
     if (searchQuery) {
-      // Search endpoint with optional genre filter
       let endpoint = `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&language=en-US&page=${page}`;
-      if (genreId) {
-        endpoint += `&with_genres=${genreId}`;
-      }
+      if (genreId) endpoint += `&with_genres=${genreId}`;
       return endpoint;
     }
     if (categoryId.startsWith("genre-")) {
@@ -33,18 +33,13 @@ function CategoryDetail() {
       return `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_genres=${genreId}&language=en-US&page=${page}`;
     }
     switch (categoryId) {
-      case "trending":
-        return `${BASE_URL}/trending/movie/week?api_key=${API_KEY}&page=${page}`;
-      case "new-releases":
-        return `${BASE_URL}/movie/now_playing?api_key=${API_KEY}&language=en-US&page=${page}`;
-      case "popular":
-        return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
-      default:
-        return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
+      case "trending": return `${BASE_URL}/trending/movie/week?api_key=${API_KEY}&page=${page}`;
+      case "new-releases": return `${BASE_URL}/movie/now_playing?api_key=${API_KEY}&language=en-US&page=${page}`;
+      case "popular": return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
+      default: return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
     }
   };
 
-  // Fetch movies for the category, genre, or search
   useEffect(() => {
     const fetchMovies = async () => {
       try {
@@ -65,7 +60,6 @@ function CategoryDetail() {
     fetchMovies();
   }, [categoryId, page, searchQuery, genreId]);
 
-  // Fetch movie details and trailer when a movie is selected
   useEffect(() => {
     if (!selectedMovie) return;
 
@@ -93,23 +87,33 @@ function CategoryDetail() {
     fetchMovieDetails();
   }, [selectedMovie]);
 
-  // Handle movie card click
   const handleMovieClick = (movie) => {
     setSelectedMovie(movie);
     setMovieDetails(null);
     setTrailerKey(null);
   };
 
-  // Close the modal
   const handleCloseModal = () => {
     setSelectedMovie(null);
     setMovieDetails(null);
     setTrailerKey(null);
   };
 
-  // Load more movies
   const handleLoadMore = () => {
     setPage((prev) => prev + 1);
+  };
+
+  const handleToggleList = (movie) => {
+    if (!user) {
+      alert("Please sign in to add movies to your list.");
+      return;
+    }
+    const isInList = isMovieInList(user.uid, movie.id);
+    if (isInList) {
+      removeFromUserList(user.uid, movie.id);
+    } else {
+      addToUserList(user.uid, { id: movie.id, title: movie.title, img: movie.img });
+    }
   };
 
   return (
@@ -131,6 +135,17 @@ function CategoryDetail() {
                 <img src={movie.img} className="card-img-top" alt={movie.title} />
                 <div className="card-body text-center">
                   <p className="card-text">{movie.title}</p>
+                  {user && (
+                 <button
+                 className={`btn btn-sm mt-2 ${isMovieInList(user.uid, movie.id) ? 'btn-outline-danger' : 'btn-danger'}`}
+                 onClick={(e) => {
+                   e.stopPropagation(); // Prevent card click
+                   handleToggleList(movie);
+                 }}
+               >
+                 {isMovieInList(user.uid, movie.id) ? 'Remove' : 'Add to List'}
+               </button>
+                  )}
                 </div>
               </motion.div>
             </div>
@@ -142,7 +157,6 @@ function CategoryDetail() {
           </button>
         </div>
 
-        {/* Modal for movie details and trailer */}
         {selectedMovie && (
           <div
             className="modal fade show d-block"
