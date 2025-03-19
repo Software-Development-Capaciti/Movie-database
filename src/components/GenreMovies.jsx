@@ -1,13 +1,50 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAuth } from "firebase/auth"; // Add Firebase auth
+import { getAuth } from "firebase/auth";
 import axios from "axios";
 import {
   addToUserList,
   isMovieInList,
   removeFromUserList,
-} from "../utils/localStorage"; // Import utils
+} from "../utils/localStorage";
+
+// Utility functions for ratings in localStorage
+const saveUserRating = (userId, movieId, rating) => {
+  const ratings = JSON.parse(localStorage.getItem(`ratings_${userId}`) || "{}");
+  ratings[movieId] = rating;
+  localStorage.setItem(`ratings_${userId}`, JSON.stringify(ratings));
+};
+
+const getUserRating = (userId, movieId) => {
+  const ratings = JSON.parse(localStorage.getItem(`ratings_${userId}`) || "{}");
+  return ratings[movieId] || 0;
+};
+
+const StarRating = ({ rating, onRate }) => {
+  const stars = Array(5)
+    .fill(false)
+    .map((_, index) => index < rating);
+
+  return (
+    <div className="star-rating">
+      {stars.map((filled, index) => (
+        <span
+          key={index}
+          className={`star ${filled ? "filled" : ""}`}
+          onClick={() => onRate(index + 1)}
+          style={{
+            color: filled ? "#ffcc00" : "#ddd",
+            cursor: "pointer",
+            fontSize: "40px",
+          }}
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  );
+};
 
 function GenreMovies() {
   const [genres, setGenres] = useState([]);
@@ -17,12 +54,13 @@ function GenreMovies() {
   const [trailerKey, setTrailerKey] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("");
+  const [rating, setRating] = useState(0);
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
   const navigate = useNavigate();
   const auth = getAuth();
-  const user = auth.currentUser; // Get current user
+  const user = auth.currentUser;
 
   useEffect(() => {
     const fetchGenres = async () => {
@@ -106,6 +144,12 @@ function GenreMovies() {
           (video) => video.type === "Trailer" && video.site === "YouTube"
         );
         setTrailerKey(trailer ? trailer.key : null);
+
+        // Load existing rating if user is logged in
+        if (user) {
+          const savedRating = getUserRating(user.uid, selectedMovie.id);
+          setRating(savedRating);
+        }
       } catch (error) {
         console.error("Error fetching movie details or trailer:", error);
         setMovieDetails(null);
@@ -114,18 +158,20 @@ function GenreMovies() {
     };
 
     fetchMovieDetails();
-  }, [selectedMovie]);
+  }, [selectedMovie, user]);
 
   const handleMovieClick = (movie) => {
     setSelectedMovie(movie);
     setMovieDetails(null);
     setTrailerKey(null);
+    setRating(user ? getUserRating(user.uid, movie.id) : 0);
   };
 
   const handleCloseModal = () => {
     setSelectedMovie(null);
     setMovieDetails(null);
     setTrailerKey(null);
+    setRating(0);
   };
 
   const handleToggleList = (movie) => {
@@ -142,6 +188,24 @@ function GenreMovies() {
         title: movie.title,
         img: movie.img,
       });
+    }
+  };
+
+  const handleRatingChange = (newRating) => {
+    setRating(newRating);
+    if (user && selectedMovie) {
+      saveUserRating(user.uid, selectedMovie.id, newRating);
+    }
+  };
+
+  const handleSubmitRating = () => {
+    if (!user) {
+      alert("Please sign in to submit ratings.");
+      return;
+    }
+    if (selectedMovie) {
+      saveUserRating(user.uid, selectedMovie.id, rating);
+      console.log("Rating saved:", rating);
     }
   };
 
@@ -216,7 +280,7 @@ function GenreMovies() {
                             : "btn-danger"
                         }`}
                         onClick={(e) => {
-                          e.stopPropagation(); // Prevent card click
+                          e.stopPropagation();
                           handleToggleList(movie);
                         }}
                       >
@@ -301,6 +365,24 @@ function GenreMovies() {
                             minutes
                           </p>
                         </div>
+                      </div>
+                      <div className="mt-3">
+                        <h5>Rate this Movie</h5>
+                        <StarRating
+                          rating={rating}
+                          onRate={handleRatingChange}
+                        />
+                        {user && rating > 0 && (
+                          <p className="mt-2">Your rating: {rating}/5</p>
+                        )}
+                      </div>
+                      <div className="mt-3">
+                        <button
+                          className="btn btn-danger"
+                          onClick={handleSubmitRating}
+                        >
+                          Submit Rating
+                        </button>
                       </div>
                     </>
                   ) : (

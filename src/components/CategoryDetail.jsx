@@ -1,9 +1,46 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
-import { getAuth } from "firebase/auth"; // Add Firebase auth
+import { getAuth } from "firebase/auth";
 import axios from "axios";
-import { addToUserList, isMovieInList, removeFromUserList } from "../utils/localStorage"; // Import utils
+import { addToUserList, isMovieInList, removeFromUserList } from "../utils/localStorage";
+
+// Utility functions for ratings in localStorage
+const saveUserRating = (userId, movieId, rating) => {
+  const ratings = JSON.parse(localStorage.getItem(`ratings_${userId}`) || '{}');
+  ratings[movieId] = rating;
+  localStorage.setItem(`ratings_${userId}`, JSON.stringify(ratings));
+};
+
+const getUserRating = (userId, movieId) => {
+  const ratings = JSON.parse(localStorage.getItem(`ratings_${userId}`) || '{}');
+  return ratings[movieId] || 0;
+};
+
+const StarRating = ({ rating, onRate }) => {
+  const stars = Array(5)
+    .fill(false)
+    .map((_, index) => index < rating);
+
+  return (
+    <div className="star-rating">
+      {stars.map((filled, index) => (
+        <span
+          key={index}
+          className={`star ${filled ? "filled" : ""}`}
+          onClick={() => onRate(index + 1)}
+          style={{
+            color: filled ? "#ffcc00" : "#ddd",
+            cursor: "pointer",
+            fontSize: "40px",
+          }}
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  );
+};
 
 function CategoryDetail() {
   const [movies, setMovies] = useState([]);
@@ -11,6 +48,7 @@ function CategoryDetail() {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [trailerKey, setTrailerKey] = useState(null);
+  const [rating, setRating] = useState(0);
   const { categoryId } = useParams();
   const { state } = useLocation();
   const categoryTitle = state?.categoryTitle || "Category";
@@ -20,7 +58,7 @@ function CategoryDetail() {
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
   const auth = getAuth();
-  const user = auth.currentUser; // Get current user
+  const user = auth.currentUser;
 
   const getEndpoint = () => {
     if (searchQuery) {
@@ -77,6 +115,12 @@ function CategoryDetail() {
           (video) => video.type === "Trailer" && video.site === "YouTube"
         );
         setTrailerKey(trailer ? trailer.key : null);
+
+        // Load existing rating if user is logged in
+        if (user) {
+          const savedRating = getUserRating(user.uid, selectedMovie.id);
+          setRating(savedRating);
+        }
       } catch (error) {
         console.error("Error fetching movie details or trailer:", error);
         setMovieDetails(null);
@@ -85,18 +129,20 @@ function CategoryDetail() {
     };
 
     fetchMovieDetails();
-  }, [selectedMovie]);
+  }, [selectedMovie, user]);
 
   const handleMovieClick = (movie) => {
     setSelectedMovie(movie);
     setMovieDetails(null);
     setTrailerKey(null);
+    setRating(user ? getUserRating(user.uid, movie.id) : 0);
   };
 
   const handleCloseModal = () => {
     setSelectedMovie(null);
     setMovieDetails(null);
     setTrailerKey(null);
+    setRating(0);
   };
 
   const handleLoadMore = () => {
@@ -113,6 +159,24 @@ function CategoryDetail() {
       removeFromUserList(user.uid, movie.id);
     } else {
       addToUserList(user.uid, { id: movie.id, title: movie.title, img: movie.img });
+    }
+  };
+
+  const handleRatingChange = (newRating) => {
+    setRating(newRating);
+    if (user && selectedMovie) {
+      saveUserRating(user.uid, selectedMovie.id, newRating);
+    }
+  };
+
+  const handleSubmitRating = () => {
+    if (!user) {
+      alert("Please sign in to submit ratings.");
+      return;
+    }
+    if (selectedMovie) {
+      saveUserRating(user.uid, selectedMovie.id, rating);
+      console.log("Rating saved:", rating);
     }
   };
 
@@ -136,15 +200,15 @@ function CategoryDetail() {
                 <div className="card-body text-center">
                   <p className="card-text">{movie.title}</p>
                   {user && (
-                 <button
-                 className={`btn btn-sm mt-2 ${isMovieInList(user.uid, movie.id) ? 'btn-outline-danger' : 'btn-danger'}`}
-                 onClick={(e) => {
-                   e.stopPropagation(); // Prevent card click
-                   handleToggleList(movie);
-                 }}
-               >
-                 {isMovieInList(user.uid, movie.id) ? 'Remove' : 'Add to List'}
-               </button>
+                    <button
+                      className={`btn btn-sm mt-2 ${isMovieInList(user.uid, movie.id) ? 'btn-outline-danger' : 'btn-danger'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleList(movie);
+                      }}
+                    >
+                      {isMovieInList(user.uid, movie.id) ? 'Remove' : 'Add to List'}
+                    </button>
                   )}
                 </div>
               </motion.div>
@@ -208,6 +272,18 @@ function CategoryDetail() {
                           <p><strong>Runtime:</strong> {movieDetails.runtime} minutes</p>
                         </div>
                       </div>
+                      <div className="mt-3">
+                        <h5>Rate this Movie</h5>
+                        <StarRating rating={rating} onRate={handleRatingChange} />
+                        {user && rating > 0 && (
+                          <p className="mt-2">Your rating: {rating}/5</p>
+                        )}
+                      </div>
+                      <div className="mt-3">
+                        <button className="btn btn-danger" onClick={handleSubmitRating}>
+                          Submit Rating
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <p>Loading details and trailer...</p>
@@ -231,4 +307,4 @@ function CategoryDetail() {
   );
 }
 
-export default CategoryDetail;
+export default CategoryDetail; 
