@@ -1,19 +1,59 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // Add this import
+import { useNavigate } from "react-router-dom";
+import { getAuth } from "firebase/auth"; // Added Firebase auth import
 import axios from "axios";
+
+// Utility functions for ratings in localStorage
+const saveUserRating = (userId, movieId, rating) => {
+  const ratings = JSON.parse(localStorage.getItem(`ratings_${userId}`) || '{}');
+  ratings[movieId] = rating;
+  localStorage.setItem(`ratings_${userId}`, JSON.stringify(ratings));
+};
+
+const getUserRating = (userId, movieId) => {
+  const ratings = JSON.parse(localStorage.getItem(`ratings_${userId}`) || '{}');
+  return ratings[movieId] || 0;
+};
+
+const StarRating = ({ rating, onRate }) => {
+  const stars = Array(5)
+    .fill(false)
+    .map((_, index) => index < rating);
+
+  return (
+    <div className="star-rating">
+      {stars.map((filled, index) => (
+        <span
+          key={index}
+          className={`star ${filled ? "filled" : ""}`}
+          onClick={() => onRate(index + 1)}
+          style={{
+            color: filled ? "#ffcc00" : "#ddd",
+            cursor: "pointer",
+            fontSize: "40px",
+          }}
+        >
+          ★
+        </span>
+      ))}
+    </div>
+  );
+};
 
 function ContentRow({ title }) {
   const [movies, setMovies] = useState([]);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [trailerKey, setTrailerKey] = useState(null);
+  const [rating, setRating] = useState(0);
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
-  const navigate = useNavigate(); // Add navigation hook
+  const navigate = useNavigate();
+  const auth = getAuth(); // Added auth initialization
+  const user = auth.currentUser; // Get current user
 
-  // Map the title to an appropriate TMDb endpoint and category ID
   const getEndpointAndId = (title) => {
     switch (title) {
       case "Trending Now":
@@ -39,7 +79,6 @@ function ContentRow({ title }) {
     }
   };
 
-  // Fetch initial movie list
   useEffect(() => {
     const fetchMovies = async () => {
       try {
@@ -65,7 +104,6 @@ function ContentRow({ title }) {
     fetchMovies();
   }, [title]);
 
-  // Fetch movie details and trailer when a movie is selected
   useEffect(() => {
     if (!selectedMovie) return;
 
@@ -83,6 +121,12 @@ function ContentRow({ title }) {
           (video) => video.type === "Trailer" && video.site === "YouTube"
         );
         setTrailerKey(trailer ? trailer.key : null);
+
+        // Load existing rating if user is logged in
+        if (user) {
+          const savedRating = getUserRating(user.uid, selectedMovie.id);
+          setRating(savedRating);
+        }
       } catch (error) {
         console.error("Error fetching movie details or trailer:", error);
         setMovieDetails(null);
@@ -91,26 +135,43 @@ function ContentRow({ title }) {
     };
 
     fetchMovieDetails();
-  }, [selectedMovie]);
+  }, [selectedMovie, user]);
 
-  // Handle movie card click
   const handleMovieClick = (movie) => {
     setSelectedMovie(movie);
     setMovieDetails(null);
     setTrailerKey(null);
+    setRating(user ? getUserRating(user.uid, movie.id) : 0);
   };
 
-  // Close the modal
   const handleCloseModal = () => {
     setSelectedMovie(null);
     setMovieDetails(null);
     setTrailerKey(null);
+    setRating(0);
   };
 
-  // Handle "View More" click
   const handleViewMore = () => {
     const { categoryId } = getEndpointAndId(title);
     navigate(`/category/${categoryId}`, { state: { categoryTitle: title } });
+  };
+
+  const handleRatingChange = (newRating) => {
+    setRating(newRating);
+    if (user && selectedMovie) {
+      saveUserRating(user.uid, selectedMovie.id, newRating);
+    }
+  };
+
+  const handleSubmitRating = () => {
+    if (!user) {
+      alert("Please sign in to submit ratings.");
+      return;
+    }
+    if (selectedMovie) {
+      saveUserRating(user.uid, selectedMovie.id, rating);
+      console.log("Rating saved:", rating);
+    }
   };
 
   return (
@@ -139,7 +200,6 @@ function ContentRow({ title }) {
         </button>
       </div>
 
-      {/* Modal for movie details and trailer */}
       {selectedMovie && (
         <div
           className="modal fade show d-block"
@@ -190,6 +250,21 @@ function ContentRow({ title }) {
                         <p><strong>Rating:</strong> {movieDetails.vote_average}/10</p>
                         <p><strong>Runtime:</strong> {movieDetails.runtime} minutes</p>
                       </div>
+                    </div>
+                    <div className="mt-3">
+                      <h5>Rate this Movie</h5>
+                      <StarRating rating={rating} onRate={handleRatingChange} />
+                      {user && rating > 0 && (
+                        <p className="mt-2">Your rating: {rating}/5</p>
+                      )}
+                    </div>
+                    <div className="mt-3">
+                      <button
+                        className="btn btn-danger"
+                        onClick={handleSubmitRating}
+                      >
+                        Submit Rating
+                      </button>
                     </div>
                   </>
                 ) : (
