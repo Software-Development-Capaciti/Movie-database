@@ -1,57 +1,45 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom"; // Add this import
 import axios from "axios";
-
-const StarRating = ({ rating, onRate }) => {
-  const stars = Array(5)
-    .fill(false)
-    .map((_, index) => index < rating);
-
-  return (
-    <div className="star-rating">
-      {stars.map((filled, index) => (
-        <span
-          key={index}
-          className={`star ${filled ? "filled" : ""}`}
-          onClick={() => onRate(index + 1)}
-          style={{
-            color: filled ? "#ffcc00" : "#ddd",
-            cursor: "pointer",
-            fontSize: "40px",
-          }}
-        >
-          &#9733;
-        </span>
-      ))}
-    </div>
-  );
-};
 
 function ContentRow({ title }) {
   const [movies, setMovies] = useState([]);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [trailerKey, setTrailerKey] = useState(null);
-  const [rating, setRating] = useState(0);
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // Add navigation hook
 
+  // Map the title to an appropriate TMDb endpoint and category ID
   const getEndpointAndId = (title) => {
     switch (title) {
       case "Trending Now":
-        return { endpoint: `${BASE_URL}/trending/movie/week?api_key=${API_KEY}`, categoryId: "trending" };
+        return {
+          endpoint: `${BASE_URL}/trending/movie/week?api_key=${API_KEY}`,
+          categoryId: "trending",
+        };
       case "New Releases":
-        return { endpoint: `${BASE_URL}/movie/now_playing?api_key=${API_KEY}&language=en-US&page=1`, categoryId: "new-releases" };
+        return {
+          endpoint: `${BASE_URL}/movie/now_playing?api_key=${API_KEY}&language=en-US&page=1`,
+          categoryId: "new-releases",
+        };
       case "Xstream Originals":
-        return { endpoint: `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`, categoryId: "popular" };
+        return {
+          endpoint: `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`,
+          categoryId: "popular",
+        };
       default:
-        return { endpoint: `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`, categoryId: "popular" };
+        return {
+          endpoint: `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=1`,
+          categoryId: "popular",
+        };
     }
   };
 
+  // Fetch initial movie list
   useEffect(() => {
     const fetchMovies = async () => {
       try {
@@ -77,16 +65,23 @@ function ContentRow({ title }) {
     fetchMovies();
   }, [title]);
 
+  // Fetch movie details and trailer when a movie is selected
   useEffect(() => {
     if (!selectedMovie) return;
 
     const fetchMovieDetails = async () => {
       try {
-        const detailsResponse = await axios.get(`${BASE_URL}/movie/${selectedMovie.id}?api_key=${API_KEY}&language=en-US`);
+        const detailsResponse = await axios.get(
+          `${BASE_URL}/movie/${selectedMovie.id}?api_key=${API_KEY}&language=en-US`
+        );
         setMovieDetails(detailsResponse.data);
 
-        const videosResponse = await axios.get(`${BASE_URL}/movie/${selectedMovie.id}/videos?api_key=${API_KEY}&language=en-US`);
-        const trailer = videosResponse.data.results.find((video) => video.type === "Trailer" && video.site === "YouTube");
+        const videosResponse = await axios.get(
+          `${BASE_URL}/movie/${selectedMovie.id}/videos?api_key=${API_KEY}&language=en-US`
+        );
+        const trailer = videosResponse.data.results.find(
+          (video) => video.type === "Trailer" && video.site === "YouTube"
+        );
         setTrailerKey(trailer ? trailer.key : null);
       } catch (error) {
         console.error("Error fetching movie details or trailer:", error);
@@ -98,31 +93,24 @@ function ContentRow({ title }) {
     fetchMovieDetails();
   }, [selectedMovie]);
 
+  // Handle movie card click
   const handleMovieClick = (movie) => {
     setSelectedMovie(movie);
     setMovieDetails(null);
     setTrailerKey(null);
-    setRating(0);
   };
 
+  // Close the modal
   const handleCloseModal = () => {
     setSelectedMovie(null);
     setMovieDetails(null);
     setTrailerKey(null);
-    setRating(0);
   };
 
+  // Handle "View More" click
   const handleViewMore = () => {
     const { categoryId } = getEndpointAndId(title);
     navigate(`/category/${categoryId}`, { state: { categoryTitle: title } });
-  };
-
-  const handleRatingChange = (newRating) => {
-    setRating(newRating);
-  };
-
-  const handleSubmitRating = () => {
-    console.log("Submitting rating:", rating);
   };
 
   return (
@@ -151,13 +139,25 @@ function ContentRow({ title }) {
         </button>
       </div>
 
+      {/* Modal for movie details and trailer */}
       {selectedMovie && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }} onClick={handleCloseModal}>
-          <div className="modal-dialog modal-lg" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal fade show d-block"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.8)" }}
+          onClick={handleCloseModal}
+        >
+          <div
+            className="modal-dialog modal-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-content bg-dark text-white">
               <div className="modal-header border-0">
                 <h5 className="modal-title">{selectedMovie.title}</h5>
-                <button type="button" className="btn-close btn-close-white" onClick={handleCloseModal}></button>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={handleCloseModal}
+                ></button>
               </div>
               <div className="modal-body">
                 {movieDetails ? (
@@ -185,28 +185,11 @@ function ContentRow({ title }) {
                         style={{ maxWidth: "200px", marginRight: "20px" }}
                       />
                       <div>
-                        <p>
-                          <strong>Overview:</strong> {movieDetails.overview}
-                        </p>
-                        <p>
-                          <strong>Release Date:</strong> {movieDetails.release_date}
-                        </p>
-                        <p>
-                          <strong>Rating:</strong> {movieDetails.vote_average}/10
-                        </p>
-                        <p>
-                          <strong>Runtime:</strong> {movieDetails.runtime} minutes
-                        </p>
+                        <p><strong>Overview:</strong> {movieDetails.overview}</p>
+                        <p><strong>Release Date:</strong> {movieDetails.release_date}</p>
+                        <p><strong>Rating:</strong> {movieDetails.vote_average}/10</p>
+                        <p><strong>Runtime:</strong> {movieDetails.runtime} minutes</p>
                       </div>
-                    </div>
-                    <div className="mt-3">
-                      <h5>Rate this Movie</h5>
-                      <StarRating rating={rating} onRate={handleRatingChange} />
-                    </div>
-                    <div className="mt-3">
-                      <button className="btn btn-danger" onClick={handleSubmitRating}>
-                        Submit Rating
-                      </button>
                     </div>
                   </>
                 ) : (
@@ -214,7 +197,11 @@ function ContentRow({ title }) {
                 )}
               </div>
               <div className="modal-footer border-0">
-                <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCloseModal}
+                >
                   Close
                 </button>
               </div>

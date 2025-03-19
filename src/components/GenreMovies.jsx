@@ -1,31 +1,13 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAuth } from "firebase/auth"; // Add Firebase auth
 import axios from "axios";
-
-const StarRating = ({ rating, onRate }) => {
-  const stars = Array(5).fill(false).map((_, index) => index < rating);
-
-  return (
-    <div className="star-rating">
-      {stars.map((filled, index) => (
-        <span
-          key={index}
-          className={`star ${filled ? "filled" : ""}`}
-          onClick={() => onRate(index + 1)}
-          style={{
-            color: filled ? "#ffcc00" : "#ddd", 
-            cursor: "pointer", 
-            fontSize: "40px", // Increase size here
-          }}
-        >
-          &#9733;
-        </span>
-      ))}
-    </div>
-  );
-};
-
+import {
+  addToUserList,
+  isMovieInList,
+  removeFromUserList,
+} from "../utils/localStorage"; // Import utils
 
 function GenreMovies() {
   const [genres, setGenres] = useState([]);
@@ -35,13 +17,13 @@ function GenreMovies() {
   const [trailerKey, setTrailerKey] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("");
-  const [rating, setRating] = useState(0); // State for movie rating
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
   const navigate = useNavigate();
+  const auth = getAuth();
+  const user = auth.currentUser; // Get current user
 
-  // Fetch list of genres on mount
   useEffect(() => {
     const fetchGenres = async () => {
       try {
@@ -59,7 +41,6 @@ function GenreMovies() {
     fetchGenres();
   }, []);
 
-  // Fetch initial movies for all genres (first page only)
   const fetchMoviesForAllGenres = async (genresList) => {
     const moviesData = {};
 
@@ -83,17 +64,22 @@ function GenreMovies() {
     setMoviesByGenre(moviesData);
   };
 
-  // Handle "View More" click to navigate to CategoryDetail
   const handleViewMore = (genreId, genreName) => {
     console.log("Navigating to CategoryDetail for genre:", genreName, genreId);
-    navigate(`/category/genre-${genreId}`, { state: { categoryTitle: `${genreName} Movies` } });
+    navigate(`/category/genre-${genreId}`, {
+      state: { categoryTitle: `${genreName} Movies` },
+    });
   };
 
-  // Handle search submission
   const handleSearch = (e) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return; // Prevent empty searches
-    console.log("Searching for:", searchQuery, "with genre:", selectedGenre || "All");
+    if (!searchQuery.trim()) return;
+    console.log(
+      "Searching for:",
+      searchQuery,
+      "with genre:",
+      selectedGenre || "All"
+    );
     navigate("/search", {
       state: {
         searchQuery,
@@ -103,7 +89,6 @@ function GenreMovies() {
     });
   };
 
-  // Fetch movie details and trailer when a movie is selected
   useEffect(() => {
     if (!selectedMovie) return;
 
@@ -131,31 +116,33 @@ function GenreMovies() {
     fetchMovieDetails();
   }, [selectedMovie]);
 
-  // Handle movie card click
   const handleMovieClick = (movie) => {
     setSelectedMovie(movie);
     setMovieDetails(null);
     setTrailerKey(null);
-    setRating(0); // Reset rating when a new movie is selected
   };
 
-  // Close the modal
   const handleCloseModal = () => {
     setSelectedMovie(null);
     setMovieDetails(null);
     setTrailerKey(null);
-    setRating(0); // Reset rating when modal is closed
   };
 
-  // Handle rating change
-  const handleRatingChange = (newRating) => {
-    setRating(newRating);
-  };
-
-  // Handle submit rating
-  const handleSubmitRating = () => {
-    console.log("Submitting rating:", rating);
-    // You can submit the rating to an API here or handle it as needed
+  const handleToggleList = (movie) => {
+    if (!user) {
+      alert("Please sign in to add movies to your list.");
+      return;
+    }
+    const isInList = isMovieInList(user.uid, movie.id);
+    if (isInList) {
+      removeFromUserList(user.uid, movie.id);
+    } else {
+      addToUserList(user.uid, {
+        id: movie.id,
+        title: movie.title,
+        img: movie.img,
+      });
+    }
   };
 
   return (
@@ -165,7 +152,6 @@ function GenreMovies() {
           Movies by Genre
         </h1>
 
-        {/* Search and Filter Form */}
         <form onSubmit={handleSearch} className="mb-5">
           <div className="row justify-content-center">
             <div className="col-md-6 col-lg-4 mb-3">
@@ -199,11 +185,13 @@ function GenreMovies() {
           </div>
         </form>
 
-        {/* Genre Sections */}
         {genres.map((genre) => (
           <section key={genre.id} className="mb-5">
             <h2 className="h3 fw-bold text-white mb-3">{genre.name}</h2>
-            <div className="d-flex overflow-auto pb-3" style={{ scrollbarWidth: "none" }}>
+            <div
+              className="d-flex overflow-auto pb-3"
+              style={{ scrollbarWidth: "none" }}
+            >
               {(moviesByGenre[genre.id] || []).map((movie, index) => (
                 <motion.div
                   key={`${genre.id}-${index}`}
@@ -213,9 +201,30 @@ function GenreMovies() {
                   style={{ minWidth: "200px", cursor: "pointer" }}
                   onClick={() => handleMovieClick(movie)}
                 >
-                  <img src={movie.img} className="card-img-top" alt={movie.title} />
+                  <img
+                    src={movie.img}
+                    className="card-img-top"
+                    alt={movie.title}
+                  />
                   <div className="card-body text-center">
                     <p className="card-text">{movie.title}</p>
+                    {user && (
+                      <button
+                        className={`btn btn-sm mt-2 ${
+                          isMovieInList(user.uid, movie.id)
+                            ? "btn-outline-danger"
+                            : "btn-danger"
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent card click
+                          handleToggleList(movie);
+                        }}
+                      >
+                        {isMovieInList(user.uid, movie.id)
+                          ? "Remove"
+                          : "Add to List"}
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -231,7 +240,6 @@ function GenreMovies() {
           </section>
         ))}
 
-        {/* Modal for movie details and trailer */}
         {selectedMovie && (
           <div
             className="modal fade show d-block"
@@ -277,23 +285,22 @@ function GenreMovies() {
                           style={{ maxWidth: "200px", marginRight: "20px" }}
                         />
                         <div>
-                          <p><strong>Overview:</strong> {movieDetails.overview}</p>
-                          <p><strong>Release Date:</strong> {movieDetails.release_date}</p>
-                          <p><strong>Rating:</strong> {movieDetails.vote_average}/10</p>
-                          <p><strong>Runtime:</strong> {movieDetails.runtime} minutes</p>
+                          <p>
+                            <strong>Overview:</strong> {movieDetails.overview}
+                          </p>
+                          <p>
+                            <strong>Release Date:</strong>{" "}
+                            {movieDetails.release_date}
+                          </p>
+                          <p>
+                            <strong>Rating:</strong> {movieDetails.vote_average}
+                            /10
+                          </p>
+                          <p>
+                            <strong>Runtime:</strong> {movieDetails.runtime}{" "}
+                            minutes
+                          </p>
                         </div>
-                      </div>
-                      <div className="mt-3">
-                        <h5>Rate this Movie</h5>
-                        <StarRating rating={rating} onRate={handleRatingChange} />
-                      </div>
-                      <div className="mt-3">
-                        <button
-                          className="btn btn-danger"
-                          onClick={handleSubmitRating}
-                        >
-                          Submit Rating
-                        </button>
                       </div>
                     </>
                   ) : (

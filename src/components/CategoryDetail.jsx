@@ -1,33 +1,9 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
+import { getAuth } from "firebase/auth"; // Add Firebase auth
 import axios from "axios";
-
-const StarRating = ({ rating, onRate }) => {
-  const stars = Array(5)
-    .fill(false)
-    .map((_, index) => index < rating);
-    
-
-  return (
-    <div className="star-rating">
-      {stars.map((filled, index) => (
-        <span
-          key={index}
-          className={`star ${filled ? "filled" : ""}`}
-          onClick={() => onRate(index + 1)}
-          style={{
-            color: filled ? "#ffcc00" : "#ddd",
-            cursor: "pointer",
-            fontSize: "40px",
-          }}
-        >
-          &#9733;
-        </span>
-      ))}
-    </div>
-  );
-};
+import { addToUserList, isMovieInList, removeFromUserList } from "../utils/localStorage"; // Import utils
 
 function CategoryDetail() {
   const [movies, setMovies] = useState([]);
@@ -35,7 +11,6 @@ function CategoryDetail() {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
   const [trailerKey, setTrailerKey] = useState(null);
-  const [rating, setRating] = useState(0); // State for rating
   const { categoryId } = useParams();
   const { state } = useLocation();
   const categoryTitle = state?.categoryTitle || "Category";
@@ -44,13 +19,13 @@ function CategoryDetail() {
   const API_KEY = "af4905a1355138ebdf953acefa15cd9f";
   const BASE_URL = "https://api.themoviedb.org/3";
   const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w300";
+  const auth = getAuth();
+  const user = auth.currentUser; // Get current user
 
   const getEndpoint = () => {
     if (searchQuery) {
       let endpoint = `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(searchQuery)}&language=en-US&page=${page}`;
-      if (genreId) {
-        endpoint += `&with_genres=${genreId}`;
-      }
+      if (genreId) endpoint += `&with_genres=${genreId}`;
       return endpoint;
     }
     if (categoryId.startsWith("genre-")) {
@@ -58,14 +33,10 @@ function CategoryDetail() {
       return `${BASE_URL}/discover/movie?api_key=${API_KEY}&with_genres=${genreId}&language=en-US&page=${page}`;
     }
     switch (categoryId) {
-      case "trending":
-        return `${BASE_URL}/trending/movie/week?api_key=${API_KEY}&page=${page}`;
-      case "new-releases":
-        return `${BASE_URL}/movie/now_playing?api_key=${API_KEY}&language=en-US&page=${page}`;
-      case "popular":
-        return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
-      default:
-        return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
+      case "trending": return `${BASE_URL}/trending/movie/week?api_key=${API_KEY}&page=${page}`;
+      case "new-releases": return `${BASE_URL}/movie/now_playing?api_key=${API_KEY}&language=en-US&page=${page}`;
+      case "popular": return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
+      default: return `${BASE_URL}/movie/popular?api_key=${API_KEY}&language=en-US&page=${page}`;
     }
   };
 
@@ -73,6 +44,7 @@ function CategoryDetail() {
     const fetchMovies = async () => {
       try {
         const endpoint = getEndpoint();
+        console.log("Fetching movies from:", endpoint);
         const response = await axios.get(endpoint);
         const newMovies = response.data.results.map((movie) => ({
           id: movie.id,
@@ -131,12 +103,17 @@ function CategoryDetail() {
     setPage((prev) => prev + 1);
   };
 
-  const handleRatingChange = (newRating) => {
-    setRating(newRating);
-  };
-
-  const handleSubmitRating = () => {
-    console.log("Submitting rating:", rating);
+  const handleToggleList = (movie) => {
+    if (!user) {
+      alert("Please sign in to add movies to your list.");
+      return;
+    }
+    const isInList = isMovieInList(user.uid, movie.id);
+    if (isInList) {
+      removeFromUserList(user.uid, movie.id);
+    } else {
+      addToUserList(user.uid, { id: movie.id, title: movie.title, img: movie.img });
+    }
   };
 
   return (
@@ -158,6 +135,17 @@ function CategoryDetail() {
                 <img src={movie.img} className="card-img-top" alt={movie.title} />
                 <div className="card-body text-center">
                   <p className="card-text">{movie.title}</p>
+                  {user && (
+                 <button
+                 className={`btn btn-sm mt-2 ${isMovieInList(user.uid, movie.id) ? 'btn-outline-danger' : 'btn-danger'}`}
+                 onClick={(e) => {
+                   e.stopPropagation(); // Prevent card click
+                   handleToggleList(movie);
+                 }}
+               >
+                 {isMovieInList(user.uid, movie.id) ? 'Remove' : 'Add to List'}
+               </button>
+                  )}
                 </div>
               </motion.div>
             </div>
@@ -169,7 +157,6 @@ function CategoryDetail() {
           </button>
         </div>
 
-        {/* Modal for movie details and trailer */}
         {selectedMovie && (
           <div
             className="modal fade show d-block"
@@ -220,15 +207,6 @@ function CategoryDetail() {
                           <p><strong>Rating:</strong> {movieDetails.vote_average}/10</p>
                           <p><strong>Runtime:</strong> {movieDetails.runtime} minutes</p>
                         </div>
-                      </div>
-                      <div className="mt-3">
-                        <h5>Rate this Movie</h5>
-                        <StarRating rating={rating} onRate={handleRatingChange} />
-                      </div>
-                      <div className="mt-3">
-                        <button className="btn btn-danger" onClick={handleSubmitRating}>
-                          Submit Rating
-                        </button>
                       </div>
                     </>
                   ) : (

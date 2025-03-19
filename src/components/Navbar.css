@@ -1,0 +1,48 @@
+@media (max-width: 991.98px) {
+  .mobile-menu {
+    position: fixed;
+    top: 70px;
+    right: 0;
+    width: 250px;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    padding: 20px;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .mobile-menu.show {
+    transform: translateX(0);
+  }
+
+  .navbar-nav {
+    gap: 1rem;
+  }
+
+  .dropdown-menu {
+    position: static !important;
+    width: 100%;
+    margin-top: 0.5rem;
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+
+  .navbar-toggler:focus {
+    box-shadow: none;
+  }
+}
+
+/* Ensure dropdown menu is above video */
+.dropdown-menu {
+  z-index: 1100;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Make navbar more transparent */
+.navbar {
+  transition: background-color 0.3s ease;
+}
+
+.navbar:hover {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
