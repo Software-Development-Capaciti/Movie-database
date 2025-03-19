@@ -5,6 +5,7 @@ import ContentRow from "./components/ContentRow";
 import GenreMovies from "./components/GenreMovies";
 import GenreDetail from "./components/GenreDetail";
 import CategoryDetail from "./components/CategoryDetail";
+import MyList from "./components/MyList"; // Import MyList component
 
 function App() {
   return (
@@ -26,7 +27,8 @@ function App() {
           <Route path="/genres" element={<GenreMovies />} />
           <Route path="/genres/:genreId" element={<GenreDetail />} />
           <Route path="/category/:categoryId" element={<CategoryDetail />} />
-          <Route path="/search" element={<CategoryDetail />} /> {/* Add search route */}
+          <Route path="/search" element={<CategoryDetail />} />
+          <Route path="/my-list" element={<MyList />} /> {/* Add My List route */}
         </Routes>
       </div>
     </Router>
