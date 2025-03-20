@@ -58,9 +58,6 @@ function Navbar() {
                 <Link className="nav-link text-light" to="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
               </li>
               <li className="nav-item">
-                <a className="nav-link text-light" href="#" onClick={() => setIsMenuOpen(false)}>TV Shows</a>
-              </li>
-              <li className="nav-item">
                 <Link className="nav-link text-light" to="/genres" onClick={() => setIsMenuOpen(false)}>Movies</Link>
               </li>
               {user && (
@@ -70,46 +67,45 @@ function Navbar() {
               )}
               <li className="nav-item ms-2">
                 {user ? (
-                  <div className="dropdown">
-                    <button 
-                      className="btn btn-transparent dropdown-toggle d-flex align-items-center" 
-                      type="button" 
-                      data-bs-toggle="dropdown"
-                      aria-expanded="false"
-                    >
-                      <div 
-                        className="bg-danger rounded-circle me-2 d-flex align-items-center justify-content-center" 
-                        style={{ width: '32px', height: '32px' }}
+                  <div className="d-flex align-items-center">
+                    <div className="dropdown me-3">
+                      <button 
+                        className="btn btn-transparent dropdown-toggle d-flex align-items-center" 
+                        type="button" 
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
                       >
-                        {user.email[0].toUpperCase()}
-                      </div>
-                    </button>
-                    <ul className="dropdown-menu dropdown-menu-dark dropdown-menu-end">
-                      <li>
-                        <span className="dropdown-item-text text-light">
-                          {user.email}
-                        </span>
-                      </li>
-                      <li><hr className="dropdown-divider" /></li>
-                      <li>
-                        <Link className="dropdown-item" to="/profile" onClick={() => setIsMenuOpen(false)}>Profile</Link>
-                      </li>
-                      <li>
-                        <Link className="dropdown-item" to="/settings" onClick={() => setIsMenuOpen(false)}>Settings</Link>
-                      </li>
-                      <li><hr className="dropdown-divider" /></li>
-                      <li>
-                        <button 
-                          className="dropdown-item text-danger" 
-                          onClick={() => {
-                            handleSignOut();
-                            setIsMenuOpen(false);
-                          }}
+                        <div 
+                          className="bg-danger rounded-circle me-2 d-flex align-items-center justify-content-center" 
+                          style={{ width: '32px', height: '32px' }}
                         >
-                          Sign Out
-                        </button>
-                      </li>
-                    </ul>
+                          {user.email[0].toUpperCase()}
+                        </div>
+                      </button>
+                      <ul className="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                        <li>
+                          <span className="dropdown-item-text text-light">
+                            {user.email}
+                          </span>
+                        </li>
+                        <li><hr className="dropdown-divider" /></li>
+                        <li>
+                          <Link className="dropdown-item" to="/profile" onClick={() => setIsMenuOpen(false)}>Profile</Link>
+                        </li>
+                        <li>
+                          <Link className="dropdown-item" to="/my-list" onClick={() => setIsMenuOpen(false)}>My List</Link>
+                        </li>
+                      </ul>
+                    </div>
+                    <button 
+                      className="btn btn-outline-danger" 
+                      onClick={() => {
+                        handleSignOut();
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      Sign Out
+                    </button>
                   </div>
                 ) : (
                   <button 
