@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import Auth from './Auth';
 import './Navbar.css';
-import xstreamIcon from '../assets/popcorn-movie-cinema-svgrepo-com.svg'; // Adjust path to your icon
+import xstreamIcon from '../assets/popcorn-movie-cinema-svgrepo-com.svg';
 
 function Navbar() {
   const [showAuth, setShowAuth] = useState(false);
@@ -47,7 +47,7 @@ function Navbar() {
               src={xstreamIcon} 
               alt="XStream Icon" 
               className="me-2" 
-              style={{ width: '32px', height: '32px' }} // Adjust size as needed
+              style={{ width: '32px', height: '32px' }}
             />
             Xstream
           </Link>
@@ -64,15 +64,29 @@ function Navbar() {
               <li className="nav-item">
                 <Link className="nav-link text-light" to="/" onClick={() => setIsMenuOpen(false)}>Home</Link>
               </li>
-              <li className="nav-item">
+              {/* <li className="nav-item">
                 <a className="nav-link text-light" href="#" onClick={() => setIsMenuOpen(false)}>TV Shows</a>
-              </li>
+              </li> */}
               <li className="nav-item">
                 <Link className="nav-link text-light" to="/genres" onClick={() => setIsMenuOpen(false)}>Movies</Link>
               </li>
               {user && (
                 <li className="nav-item">
                   <Link className="nav-link text-light" to="/my-list" onClick={() => setIsMenuOpen(false)}>My List</Link>
+                </li>
+              )}
+              {/* New Sign Out Button */}
+              {user && (
+                <li className="nav-item ms-2">
+                  <button 
+                    className="btn btn-outline-danger"
+                    onClick={() => {
+                      handleSignOut();
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    Sign Out
+                  </button>
                 </li>
               )}
               <li className="nav-item ms-2">
@@ -103,18 +117,6 @@ function Navbar() {
                       </li>
                       <li>
                         <Link className="dropdown-item" to="/settings" onClick={() => setIsMenuOpen(false)}>Settings</Link>
-                      </li>
-                      <li><hr className="dropdown-divider" /></li>
-                      <li>
-                        <button 
-                          className="dropdown-item text-danger" 
-                          onClick={() => {
-                            handleSignOut();
-                            setIsMenuOpen(false);
-                          }}
-                        >
-                          Sign Out
-                        </button>
                       </li>
                     </ul>
                   </div>
